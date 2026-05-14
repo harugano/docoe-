@@ -39,6 +39,15 @@ export function currentMonth(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+export function currentDate(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+export function getDailyScore(date: string): MonthlyScore {
+  return calcMonthScore(loadRecords(), loadPurchases(), date);
+}
+
 export function prevMonth(month: string): string {
   const [y, m] = month.split("-").map(Number);
   const d = new Date(y, m - 2, 1);

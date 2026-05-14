@@ -9,6 +9,7 @@ import {
 import {
   getMonthlyScore, getRecentMonths, initHistory,
   currentMonth, prevMonth, formatMonthLabel,
+  currentDate, getDailyScore,
 } from "@/lib/store";
 import { MonthlyScore } from "@/lib/types";
 import ScoreCard from "@/components/ScoreCard";
@@ -34,20 +35,25 @@ function highlightComment(score: MonthlyScore, prevScore: MonthlyScore | null): 
 }
 
 export default function HomePage() {
-  const [cur, setCur]     = useState<MonthlyScore | null>(null);
-  const [prev, setPrev]   = useState<MonthlyScore | null>(null);
-  const [chart, setChart] = useState<MonthlyScore[]>([]);
+  const [cur, setCur]       = useState<MonthlyScore | null>(null);
+  const [prev, setPrev]     = useState<MonthlyScore | null>(null);
+  const [chart, setChart]   = useState<MonthlyScore[]>([]);
+  const [daily, setDaily]   = useState<MonthlyScore | null>(null);
+  const [today, setToday]   = useState<string>("");
 
   useEffect(() => {
     initHistory();
     const now  = currentMonth();
     const last = prevMonth(now);
+    const date = currentDate();
     setCur(getMonthlyScore(now));
     setPrev(getMonthlyScore(last));
     setChart(getRecentMonths(6));
+    setDaily(getDailyScore(date));
+    setToday(date);
   }, []);
 
-  if (!cur) return null;
+  if (!cur || !daily) return null;
 
   const diff    = prev ? diffLabel(cur.totalScore, prev.totalScore) : null;
   const comment = highlightComment(cur, prev);
@@ -62,13 +68,14 @@ export default function HomePage() {
   }));
 
   const radarData = [
-    { subject: "お金のめぐり", score: cur.moneyScore },
-    { subject: "ごみのめぐり", score: cur.wasteScore },
-    { subject: "エコ",         score: cur.ecoScore },
-    { subject: "地域循環",     score: cur.localScore },
-    { subject: "気づき",       score: cur.awarenessScore },
+    { subject: "お金のめぐり", score: daily.moneyScore },
+    { subject: "ごみのめぐり", score: daily.wasteScore },
+    { subject: "エコ",         score: daily.ecoScore },
+    { subject: "地域循環",     score: daily.localScore },
+    { subject: "気づき",       score: daily.awarenessScore },
   ];
   const radarMax = Math.max(10, ...radarData.map((d) => d.score));
+  const todayLabel = today ? today.replace(/^(\d{4})-(\d{2})-(\d{2})$/, "$1年$2月$3日") : "";
 
   return (
     <div className="px-4 pt-6 pb-4 space-y-5">
@@ -135,9 +142,9 @@ export default function HomePage() {
 
       {/* 今月のスコアレーダーチャート */}
       <section className="bg-white rounded-2xl p-4 shadow-sm border border-[#ede8dc]">
-        <h2 className="text-xs font-semibold text-[#4a5e4a] mb-1">今月のスコア分布</h2>
-        <p className="text-[10px] text-[#8aaa8a] mb-2">5つの視点から今月の活動を可視化</p>
-        {cur.totalScore > 0 ? (
+        <h2 className="text-xs font-semibold text-[#4a5e4a] mb-1">今日のスコア分布</h2>
+        <p className="text-[10px] text-[#8aaa8a] mb-2">{todayLabel} — 5つの視点から今日の活動を可視化</p>
+        {daily.totalScore > 0 ? (
           <ResponsiveContainer width="100%" height={230}>
             <RadarChart data={radarData} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
               <PolarGrid stroke="#ede8dc" />
@@ -162,10 +169,10 @@ export default function HomePage() {
           </ResponsiveContainer>
         ) : (
           <p className="text-xs text-[#8aaa8a] text-center py-8">
-            記録を追加するとレーダーチャートが表示されます
+            今日の記録を追加するとレーダーチャートが表示されます
           </p>
         )}
-        {cur.totalScore > 0 && (
+        {daily.totalScore > 0 && (
           <div className="mt-2 grid grid-cols-5 gap-1 text-center">
             {radarData.map((d) => (
               <div key={d.subject} className="flex flex-col items-center gap-0.5">
