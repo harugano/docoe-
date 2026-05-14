@@ -41,10 +41,10 @@ export function calcPurchaseScore(
   breakdown.awarenessScore += 2;
   reasons.push("企業情報を確認した (+2)");
 
-  // 環境保全活動
+  // 環境保全活動（企業ごとの評価スコアを反映）
   if (company.environmentalActions.length > 0) {
-    breakdown.ecoScore += 3;
-    reasons.push("環境保全活動が確認できる (+3)");
+    breakdown.ecoScore += company.ecoScore;
+    reasons.push(`環境保全活動（企業評価スコア +${company.ecoScore}）`);
   }
 
   // 社会貢献活動

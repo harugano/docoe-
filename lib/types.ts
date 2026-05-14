@@ -70,6 +70,9 @@ export interface CompanyImpact {
   negativeRisks: string[];
   cautionNote: string;
 
+  /** 環境保全取り組みの独自評価スコア（1〜5）。purchaseScore の eco 加算に使用 */
+  ecoScore: number;
+
   dataBasis: string;
   confidenceLevel: ConfidenceLevel;
   lastUpdated: string;
