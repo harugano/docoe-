@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import {
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
+  ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
 } from "recharts";
 import {
   getMonthlyScore, getRecentMonths, initHistory,
@@ -32,13 +34,13 @@ function highlightComment(score: MonthlyScore, prevScore: MonthlyScore | null): 
 }
 
 export default function HomePage() {
-  const [cur, setCur] = useState<MonthlyScore | null>(null);
-  const [prev, setPrev] = useState<MonthlyScore | null>(null);
+  const [cur, setCur]     = useState<MonthlyScore | null>(null);
+  const [prev, setPrev]   = useState<MonthlyScore | null>(null);
   const [chart, setChart] = useState<MonthlyScore[]>([]);
 
   useEffect(() => {
     initHistory();
-    const now = currentMonth();
+    const now  = currentMonth();
     const last = prevMonth(now);
     setCur(getMonthlyScore(now));
     setPrev(getMonthlyScore(last));
@@ -47,17 +49,26 @@ export default function HomePage() {
 
   if (!cur) return null;
 
-  const diff = prev ? diffLabel(cur.totalScore, prev.totalScore) : null;
+  const diff    = prev ? diffLabel(cur.totalScore, prev.totalScore) : null;
   const comment = highlightComment(cur, prev);
 
   const chartData = chart.map((m) => ({
-    name: formatMonthLabel(m.month).replace("年", "/").replace("月", ""),
-    合計: m.totalScore,
-    お金: m.moneyScore,
-    ごみ: m.wasteScore,
-    エコ: m.ecoScore,
-    地域: m.localScore,
+    name:  formatMonthLabel(m.month).replace("年", "/").replace("月", ""),
+    合計:  m.totalScore,
+    お金:  m.moneyScore,
+    ごみ:  m.wasteScore,
+    エコ:  m.ecoScore,
+    地域:  m.localScore,
   }));
+
+  const radarData = [
+    { subject: "お金のめぐり", score: cur.moneyScore },
+    { subject: "ごみのめぐり", score: cur.wasteScore },
+    { subject: "エコ",         score: cur.ecoScore },
+    { subject: "地域循環",     score: cur.localScore },
+    { subject: "気づき",       score: cur.awarenessScore },
+  ];
+  const radarMax = Math.max(10, ...radarData.map((d) => d.score));
 
   return (
     <div className="px-4 pt-6 pb-4 space-y-5">
@@ -105,7 +116,8 @@ export default function HomePage() {
 
       {/* 月別グラフ */}
       <section className="bg-white rounded-2xl p-4 shadow-sm border border-[#ede8dc]">
-        <h2 className="text-xs font-semibold text-[#4a5e4a] mb-3">月別スコア推移（過去6ヶ月）</h2>
+        <h2 className="text-xs font-semibold text-[#4a5e4a] mb-1">月別スコア推移</h2>
+        <p className="text-[10px] text-[#8aaa8a] mb-3">アプリ開始月からの記録（最大6ヶ月）</p>
         {chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
@@ -118,6 +130,50 @@ export default function HomePage() {
           </ResponsiveContainer>
         ) : (
           <p className="text-xs text-[#8aaa8a] text-center py-8">記録を追加するとグラフが表示されます</p>
+        )}
+      </section>
+
+      {/* 今月のスコアレーダーチャート */}
+      <section className="bg-white rounded-2xl p-4 shadow-sm border border-[#ede8dc]">
+        <h2 className="text-xs font-semibold text-[#4a5e4a] mb-1">今月のスコア分布</h2>
+        <p className="text-[10px] text-[#8aaa8a] mb-2">5つの視点から今月の活動を可視化</p>
+        {cur.totalScore > 0 ? (
+          <ResponsiveContainer width="100%" height={230}>
+            <RadarChart data={radarData} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
+              <PolarGrid stroke="#ede8dc" />
+              <PolarAngleAxis
+                dataKey="subject"
+                tick={{ fontSize: 10, fill: "#4a5e4a", fontWeight: 600 }}
+              />
+              <PolarRadiusAxis
+                angle={90}
+                domain={[0, radarMax]}
+                tick={false}
+                axisLine={false}
+              />
+              <Radar
+                dataKey="score"
+                stroke="#2d6a4f"
+                fill="#52b788"
+                fillOpacity={0.35}
+                dot={{ r: 3, fill: "#2d6a4f", strokeWidth: 0 }}
+              />
+            </RadarChart>
+          </ResponsiveContainer>
+        ) : (
+          <p className="text-xs text-[#8aaa8a] text-center py-8">
+            記録を追加するとレーダーチャートが表示されます
+          </p>
+        )}
+        {cur.totalScore > 0 && (
+          <div className="mt-2 grid grid-cols-5 gap-1 text-center">
+            {radarData.map((d) => (
+              <div key={d.subject} className="flex flex-col items-center gap-0.5">
+                <span className="text-[10px] text-[#8aaa8a] leading-tight">{d.subject}</span>
+                <span className="text-xs font-bold text-[#2d6a4f]">{d.score}</span>
+              </div>
+            ))}
+          </div>
         )}
       </section>
 

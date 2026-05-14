@@ -1,11 +1,10 @@
 "use client";
 
 import { UserRecord, MonthlyScore, ScoreCategory, PurchaseRecord } from "@/lib/types";
-import { sampleMonthlyScores } from "@/lib/data/sampleHistory";
 
-const RECORDS_KEY = "docoe_records";
-const PURCHASE_KEY = "docoe_purchases";
-const HISTORY_KEY = "docoe_history";
+const RECORDS_KEY     = "docoe_records";
+const PURCHASE_KEY    = "docoe_purchases";
+const START_MONTH_KEY = "docoe_start_month";
 
 // ---- localStorage helpers ----
 
@@ -14,9 +13,7 @@ function loadRecords(): UserRecord[] {
   try {
     const raw = localStorage.getItem(RECORDS_KEY);
     return raw ? (JSON.parse(raw) as UserRecord[]) : [];
-  } catch {
-    return [];
-  }
+  } catch { return []; }
 }
 
 function saveRecords(records: UserRecord[]): void {
@@ -28,27 +25,11 @@ function loadPurchases(): PurchaseRecord[] {
   try {
     const raw = localStorage.getItem(PURCHASE_KEY);
     return raw ? (JSON.parse(raw) as PurchaseRecord[]) : [];
-  } catch {
-    return [];
-  }
+  } catch { return []; }
 }
 
 function savePurchases(purchases: PurchaseRecord[]): void {
   localStorage.setItem(PURCHASE_KEY, JSON.stringify(purchases));
-}
-
-function loadHistory(): MonthlyScore[] {
-  if (typeof window === "undefined") return sampleMonthlyScores;
-  try {
-    const raw = localStorage.getItem(HISTORY_KEY);
-    return raw ? (JSON.parse(raw) as MonthlyScore[]) : sampleMonthlyScores;
-  } catch {
-    return sampleMonthlyScores;
-  }
-}
-
-function saveHistory(history: MonthlyScore[]): void {
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
 }
 
 // ---- Month utilities ----
@@ -64,6 +45,13 @@ export function prevMonth(month: string): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+function nextMonth(month: string): string {
+  const [y, m] = month.split("-").map(Number);
+  // Date の月は 0 始まり。m (1始まり) をそのまま渡すと翌月になる
+  const d = new Date(y, m, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
 export function formatMonthLabel(month: string): string {
   const [y, m] = month.split("-").map(Number);
   return `${y}年${m}月`;
@@ -76,26 +64,21 @@ function calcMonthScore(
   purchases: PurchaseRecord[],
   month: string
 ): MonthlyScore {
-  const filteredRecords = records.filter((r) => r.createdAt.startsWith(month));
-  const filteredPurchases = purchases.filter((p) => p.createdAt.startsWith(month));
+  const rs = records.filter((r) => r.createdAt.startsWith(month));
+  const ps = purchases.filter((p) => p.createdAt.startsWith(month));
 
-  let moneyScore = 0;
-  let wasteScore = 0;
-  let ecoScore = 0;
-  let localScore = 0;
-  let awarenessScore = 0;
+  let moneyScore = 0, wasteScore = 0, ecoScore = 0, localScore = 0, awarenessScore = 0;
 
-  for (const r of filteredRecords) {
+  for (const r of rs) {
     switch (r.scoreCategory as ScoreCategory) {
-      case "waste":      wasteScore      += r.point; break;
-      case "eco":        ecoScore        += r.point; break;
-      case "local":      localScore      += r.point; break;
-      case "awareness":  awarenessScore  += r.point; break;
-      case "money":      moneyScore      += r.point; break;
+      case "waste":     wasteScore     += r.point; break;
+      case "eco":       ecoScore       += r.point; break;
+      case "local":     localScore     += r.point; break;
+      case "awareness": awarenessScore += r.point; break;
+      case "money":     moneyScore     += r.point; break;
     }
   }
-
-  for (const p of filteredPurchases) {
+  for (const p of ps) {
     moneyScore     += p.scoreBreakdown.moneyScore;
     ecoScore       += p.scoreBreakdown.ecoScore;
     localScore     += p.scoreBreakdown.localScore;
@@ -108,56 +91,64 @@ function calcMonthScore(
 
 // ---- Public API ----
 
-export function getRecords(): UserRecord[] {
-  return loadRecords();
-}
+export function getRecords(): UserRecord[] { return loadRecords(); }
 
 export function addRecord(record: UserRecord): void {
-  const records = loadRecords();
-  records.push(record);
-  saveRecords(records);
+  const list = loadRecords();
+  list.push(record);
+  saveRecords(list);
 }
 
-export function getPurchases(): PurchaseRecord[] {
-  return loadPurchases();
-}
+export function getPurchases(): PurchaseRecord[] { return loadPurchases(); }
 
 export function addPurchase(purchase: PurchaseRecord): void {
-  const purchases = loadPurchases();
-  purchases.push(purchase);
-  savePurchases(purchases);
+  const list = loadPurchases();
+  list.push(purchase);
+  savePurchases(list);
 }
 
 export function getMonthlyScore(month: string): MonthlyScore {
-  const records = loadRecords();
-  const purchases = loadPurchases();
-  return calcMonthScore(records, purchases, month);
+  return calcMonthScore(loadRecords(), loadPurchases(), month);
 }
 
-export function getFullHistory(): MonthlyScore[] {
-  const history = loadHistory();
-  const cur = currentMonth();
-  const liveScore = getMonthlyScore(cur);
-
-  // 静的履歴（moneyScore が未定義の旧データに 0 を補完）
-  const normalized = history.map((h) => ({
-    ...h,
-    moneyScore: (h as MonthlyScore & { moneyScore?: number }).moneyScore ?? 0,
-  }));
-  const withoutCurrent = normalized.filter((h) => h.month !== cur);
-  return [...withoutCurrent, liveScore].sort((a, b) =>
-    a.month.localeCompare(b.month)
-  );
-}
-
+/**
+ * アプリを初めて開いた月を記録する。
+ * この月を起点にグラフが始まる（それ以前の月は表示しない）。
+ */
 export function initHistory(): void {
   if (typeof window === "undefined") return;
-  if (!localStorage.getItem(HISTORY_KEY)) {
-    saveHistory(sampleMonthlyScores);
+  if (!localStorage.getItem(START_MONTH_KEY)) {
+    localStorage.setItem(START_MONTH_KEY, currentMonth());
   }
 }
 
+export function getStartMonth(): string {
+  if (typeof window === "undefined") return currentMonth();
+  return localStorage.getItem(START_MONTH_KEY) ?? currentMonth();
+}
+
+/**
+ * 開始月〜今月の全月をスキャンし、実績から計算したスコア配列を返す。
+ * サンプルデータは一切使用しない。開始前の月はグラフに出ない。
+ */
+export function getFullHistory(): MonthlyScore[] {
+  const start = getStartMonth();
+  const cur   = currentMonth();
+
+  const months: string[] = [];
+  let m = start;
+  while (m <= cur) {
+    months.push(m);
+    const nxt = nextMonth(m);
+    if (nxt <= m) break; // 安全ガード
+    m = nxt;
+  }
+
+  const records   = loadRecords();
+  const purchases = loadPurchases();
+  return months.map((month) => calcMonthScore(records, purchases, month));
+}
+
 export function getRecentMonths(n: number): MonthlyScore[] {
-  const all = getFullHistory();
-  return all.slice(-n);
+  return getFullHistory().slice(-n);
 }
