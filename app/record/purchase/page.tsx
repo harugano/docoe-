@@ -4,7 +4,7 @@ import { useState } from "react";
 import { findCompany, searchCompanies, popularCompanies } from "@/lib/data/companyData";
 import { CompanyImpact, PurchaseRecord } from "@/lib/types";
 import { calcPurchaseScore, confidenceLabelJa } from "@/lib/purchaseScore";
-import { addPurchase } from "@/lib/store";
+import { addPurchase, localISOString } from "@/lib/store";
 import { ChevronLeft, Check, AlertTriangle, Search, ExternalLink } from "lucide-react";
 import Link from "next/link";
 
@@ -79,7 +79,7 @@ export default function PurchasePage() {
       memo,
       point: scoreResult.total,
       scoreBreakdown: scoreResult.breakdown,
-      createdAt: new Date().toISOString(),
+      createdAt: localISOString(),
     };
     addPurchase(record);
     setSaved(record);

@@ -16,8 +16,15 @@ function loadRecords(): UserRecord[] {
   } catch { return []; }
 }
 
+function dispatchUpdate(): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("docoe:updated"));
+  }
+}
+
 function saveRecords(records: UserRecord[]): void {
   localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
+  dispatchUpdate();
 }
 
 function loadPurchases(): PurchaseRecord[] {
@@ -30,6 +37,17 @@ function loadPurchases(): PurchaseRecord[] {
 
 function savePurchases(purchases: PurchaseRecord[]): void {
   localStorage.setItem(PURCHASE_KEY, JSON.stringify(purchases));
+  dispatchUpdate();
+}
+
+/** UTC ではなくローカル時刻の ISO 形式文字列（YYYY-MM-DDTHH:mm:ss）を返す */
+export function localISOString(): string {
+  const d   = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return (
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
+    `T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+  );
 }
 
 // ---- Month utilities ----

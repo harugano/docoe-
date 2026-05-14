@@ -42,15 +42,22 @@ export default function HomePage() {
   const [today, setToday]   = useState<string>("");
 
   useEffect(() => {
-    initHistory();
-    const now  = currentMonth();
-    const last = prevMonth(now);
-    const date = currentDate();
-    setCur(getMonthlyScore(now));
-    setPrev(getMonthlyScore(last));
-    setChart(getRecentMonths(6));
-    setDaily(getDailyScore(date));
-    setToday(date);
+    const loadData = () => {
+      initHistory();
+      const now  = currentMonth();
+      const last = prevMonth(now);
+      const date = currentDate();
+      setCur(getMonthlyScore(now));
+      setPrev(getMonthlyScore(last));
+      setChart(getRecentMonths(6));
+      setDaily(getDailyScore(date));
+      setToday(date);
+    };
+
+    loadData();
+    // 記録ページで保存されたとき（同一タブ内でコンポーネントが生きていた場合）も即時反映
+    window.addEventListener("docoe:updated", loadData);
+    return () => window.removeEventListener("docoe:updated", loadData);
   }, []);
 
   if (!cur || !daily) return null;

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ecoActions } from "@/lib/data/ecoActions";
 import { EcoAction, UserRecord } from "@/lib/types";
-import { addRecord } from "@/lib/store";
+import { addRecord, localISOString } from "@/lib/store";
 import { ChevronLeft, Check, Plus } from "lucide-react";
 import Link from "next/link";
 
@@ -38,7 +38,7 @@ export default function EcoRecordPage() {
   }
 
   function handleSave() {
-    const now = new Date().toISOString();
+    const now = localISOString();
     for (const s of selected) {
       const record: UserRecord = {
         id: crypto.randomUUID(),

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { wasteItems } from "@/lib/data/wasteItems";
 import { WasteItem, UserRecord, CostType } from "@/lib/types";
-import { addRecord, currentMonth } from "@/lib/store";
+import { addRecord, currentMonth, localISOString } from "@/lib/store";
 import { ChevronLeft, Check } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -65,7 +65,7 @@ export default function WasteRecordPage() {
       point: selected.defaultPoint * Math.max(1, quantity),
       scoreCategory: "waste",
       memo,
-      createdAt: new Date().toISOString(),
+      createdAt: localISOString(),
     };
     addRecord(record);
     setSaved(true);
