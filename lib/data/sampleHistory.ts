@@ -1,0 +1,50 @@
+import { MonthlyScore } from "@/lib/types";
+
+// 過去6ヶ月のサンプルスコア履歴（今月=2026-05を起点）
+export const sampleMonthlyScores: MonthlyScore[] = [
+  {
+    month: "2025-12",
+    totalScore: 87,
+    moneyScore: 0,
+    wasteScore: 28,
+    ecoScore: 30,
+    localScore: 15,
+    awarenessScore: 14,
+  },
+  {
+    month: "2026-01",
+    totalScore: 103,
+    moneyScore: 0,
+    wasteScore: 34,
+    ecoScore: 36,
+    localScore: 18,
+    awarenessScore: 15,
+  },
+  {
+    month: "2026-02",
+    totalScore: 95,
+    moneyScore: 0,
+    wasteScore: 30,
+    ecoScore: 33,
+    localScore: 17,
+    awarenessScore: 15,
+  },
+  {
+    month: "2026-03",
+    totalScore: 118,
+    moneyScore: 0,
+    wasteScore: 38,
+    ecoScore: 40,
+    localScore: 22,
+    awarenessScore: 18,
+  },
+  {
+    month: "2026-04",
+    totalScore: 132,
+    moneyScore: 0,
+    wasteScore: 44,
+    ecoScore: 45,
+    localScore: 25,
+    awarenessScore: 18,
+  },
+];
