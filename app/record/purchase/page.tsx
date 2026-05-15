@@ -173,9 +173,9 @@ export default function PurchasePage() {
       docoeScoreBreakdown: {
         companyPoint:        result.breakdown.moneyScore + result.breakdown.ecoScore +
                              result.breakdown.localScore + result.breakdown.awarenessScore -
-                             (amt > 0 ? Math.floor(amt / 1000) : 0) - 1,
+                             Math.floor(amt / 1000) - 1,
         productEthicalPoint: result.breakdown.ethicalScore,
-        amountPoint:         Math.floor(amt / 1000),
+        amountPoint:         Math.floor(amt / 1000) + 1,
         labelPoint:          result.breakdown.labelScore,
         totalPoint:          result.total,
       },

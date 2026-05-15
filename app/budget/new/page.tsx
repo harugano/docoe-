@@ -149,7 +149,7 @@ export default function BudgetNewPage() {
         companyPoint:        breakdown.moneyScore + breakdown.ecoScore + breakdown.localScore +
                              breakdown.awarenessScore - Math.floor(amt / 1000) - 1,
         productEthicalPoint: breakdown.ethicalScore,
-        amountPoint:         Math.floor(amt / 1000),
+        amountPoint:         Math.floor(amt / 1000) + 1,
         labelPoint:          breakdown.labelScore,
         totalPoint:          result.total,
       };
