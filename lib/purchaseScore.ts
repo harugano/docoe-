@@ -78,9 +78,9 @@ export function calcPurchaseScore(
     breakdown.awarenessScore += 2;
     reasons.push("企業情報を確認した (+2)");
 
-    // 環境保全活動（企業ごとの評価スコアを反映、×2 で高低差を拡大）
+    // 環境保全活動（企業ごとの評価スコアを反映、0〜10点）
     if (company.environmentalActions.length > 0) {
-      const ecoAdd = company.ecoScore * 2;
+      const ecoAdd = company.ecoScore;
       breakdown.ecoScore += ecoAdd;
       reasons.push(`企業の環境保全活動（評価スコア +${ecoAdd}）`);
     }
