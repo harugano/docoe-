@@ -109,12 +109,17 @@ function calcMonthScore(
     }
   }
   for (const p of ps) {
-    moneyScore     += p.scoreBreakdown.moneyScore;
-    ecoScore       += p.scoreBreakdown.ecoScore;
-    localScore     += p.scoreBreakdown.localScore;
-    awarenessScore += p.scoreBreakdown.awarenessScore;
-    ethicalScore   += p.scoreBreakdown.ethicalScore ?? 0;
-    labelScore     += p.scoreBreakdown.labelScore   ?? 0;
+    // scoreBreakdown が存在しない古いデータ（localStorageの旧フォーマット）への安全ガード
+    const bd = p.scoreBreakdown ?? {
+      moneyScore: 0, ecoScore: 0, localScore: 0,
+      awarenessScore: 0, ethicalScore: 0, labelScore: 0,
+    };
+    moneyScore     += bd.moneyScore     ?? 0;
+    ecoScore       += bd.ecoScore       ?? 0;
+    localScore     += bd.localScore     ?? 0;
+    awarenessScore += bd.awarenessScore ?? 0;
+    ethicalScore   += bd.ethicalScore   ?? 0;
+    labelScore     += bd.labelScore     ?? 0;
   }
 
   const totalScore =
