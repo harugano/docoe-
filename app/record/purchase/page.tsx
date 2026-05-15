@@ -440,15 +440,16 @@ export default function PurchasePage() {
   const { breakdown } = scoreResult;
   const detectedCat = matchResult?.primaryCategory ?? null;
 
+  const amountPt = Math.floor((Number(amount) || 0) / 1000);
   const brkItems = [
     {
       label: "企業スコア",
       value: breakdown.moneyScore + breakdown.ecoScore + breakdown.localScore + breakdown.awarenessScore
-        - (Number(amount) > 0 ? Math.floor(Number(amount) / 1000) : 0) - 1,
+        - amountPt - 1,
       color: "#4a90d9",
     },
     { label: "商品インパクト", value: breakdown.ethicalScore, color: "#1a7a5e" },
-    { label: "金額ポイント",   value: Math.floor((Number(amount) || 0) / 1000), color: "#2d6a4f" },
+    { label: "記録＋金額ポイント", value: amountPt + 1, color: "#2d6a4f" },
     { label: "確認できるラベル", value: breakdown.labelScore, color: "#52b788" },
   ];
 

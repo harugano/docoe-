@@ -193,9 +193,6 @@ export function calcPurchaseScore(
   // labelScore はホーム画面で独立表示するため、エコと気づきへの追加配分は行わない。
   // spec の「反映先」は主にホーム画面の内訳表示の概念として解釈する。
 
-  // ── 気づきスコア 一律 -3 調整（最小 0）──
-  breakdown.awarenessScore = Math.max(0, breakdown.awarenessScore - 3);
-
   const hasRisk = cautionNotes.length > 0;
   const riskNote = cautionNotes[0] ?? "";
 
