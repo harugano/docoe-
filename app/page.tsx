@@ -78,6 +78,8 @@ export default function HomePage() {
     { subject: "お金のめぐり", score: daily.moneyScore },
     { subject: "ごみのめぐり", score: daily.wasteScore },
     { subject: "エコ",         score: daily.ecoScore },
+    { subject: "エシカル",     score: daily.ethicalScore },
+    { subject: "ラベル",       score: daily.labelScore },
     { subject: "地域循環",     score: daily.localScore },
     { subject: "気づき",       score: daily.awarenessScore },
   ];
@@ -116,14 +118,16 @@ export default function HomePage() {
         <p className="text-[11px] text-[#b7e4c7]/80 mt-3 leading-relaxed">{comment}</p>
       </section>
 
-      {/* スコア内訳 — 5項目 */}
+      {/* スコア内訳 — 7項目 */}
       <section>
         <h2 className="text-xs font-semibold text-[#4a5e4a] mb-2 px-1">スコア内訳</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           <ScoreCard label="お金のめぐりスコア" score={cur.moneyScore}     icon="💴" color="#4a90d9" />
           <ScoreCard label="ごみのめぐりスコア" score={cur.wasteScore}     icon="♻️" color="#2d6a4f" />
           <ScoreCard label="エコスコア"         score={cur.ecoScore}       icon="🌿" color="#52b788" />
-          <ScoreCard label="地域循環スコア"      score={cur.localScore}     icon="🏘️" color="#1a7a5e" />
+          <ScoreCard label="エシカルポイント"    score={cur.ethicalScore}   icon="🌱" color="#1a7a5e" />
+          <ScoreCard label="ラベルポイント"      score={cur.labelScore}     icon="🏷️" color="#2d9e6a" />
+          <ScoreCard label="地域循環スコア"      score={cur.localScore}     icon="🏘️" color="#6a7a2a" />
           <ScoreCard label="気づきスコア"        score={cur.awarenessScore} icon="💡" color="#c9a227" />
         </div>
       </section>
@@ -180,7 +184,7 @@ export default function HomePage() {
           </p>
         )}
         {daily.totalScore > 0 && (
-          <div className="mt-2 grid grid-cols-5 gap-1 text-center">
+          <div className="mt-2 grid grid-cols-7 gap-1 text-center">
             {radarData.map((d) => (
               <div key={d.subject} className="flex flex-col items-center gap-0.5">
                 <span className="text-[10px] text-[#8aaa8a] leading-tight">{d.subject}</span>

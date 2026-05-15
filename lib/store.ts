@@ -94,7 +94,8 @@ function calcMonthScore(
   const rs = records.filter((r) => r.createdAt.startsWith(month));
   const ps = purchases.filter((p) => p.createdAt.startsWith(month));
 
-  let moneyScore = 0, wasteScore = 0, ecoScore = 0, localScore = 0, awarenessScore = 0;
+  let moneyScore = 0, wasteScore = 0, ecoScore = 0, ethicalScore = 0, labelScore = 0,
+      localScore = 0, awarenessScore = 0;
 
   for (const r of rs) {
     switch (r.scoreCategory as ScoreCategory) {
@@ -103,6 +104,8 @@ function calcMonthScore(
       case "local":     localScore     += r.point; break;
       case "awareness": awarenessScore += r.point; break;
       case "money":     moneyScore     += r.point; break;
+      case "ethical":   ethicalScore   += r.point; break;
+      case "label":     labelScore     += r.point; break;
     }
   }
   for (const p of ps) {
@@ -110,10 +113,19 @@ function calcMonthScore(
     ecoScore       += p.scoreBreakdown.ecoScore;
     localScore     += p.scoreBreakdown.localScore;
     awarenessScore += p.scoreBreakdown.awarenessScore;
+    ethicalScore   += p.scoreBreakdown.ethicalScore ?? 0;
+    labelScore     += p.scoreBreakdown.labelScore   ?? 0;
   }
 
-  const totalScore = moneyScore + wasteScore + ecoScore + localScore + awarenessScore;
-  return { month, totalScore, moneyScore, wasteScore, ecoScore, localScore, awarenessScore };
+  const totalScore =
+    moneyScore + wasteScore + ecoScore + ethicalScore + labelScore +
+    localScore + awarenessScore;
+  return {
+    month, totalScore,
+    moneyScore, wasteScore, ecoScore,
+    ethicalScore, labelScore,
+    localScore, awarenessScore,
+  };
 }
 
 // ---- Public API ----
