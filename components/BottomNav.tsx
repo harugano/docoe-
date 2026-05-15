@@ -2,15 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Trash2, Leaf, BarChart2, Info, ShoppingBag } from "lucide-react";
+import { Home, Trash2, Leaf, BarChart2, Info, ShoppingBag, BookOpen } from "lucide-react";
 
 const navItems = [
   { href: "/", icon: Home, label: "ホーム" },
   { href: "/record/waste", icon: Trash2, label: "ごみ" },
   { href: "/record/eco", icon: Leaf, label: "エコ" },
   { href: "/record/purchase", icon: ShoppingBag, label: "買い物" },
+  { href: "/budget", icon: BookOpen, label: "家計簿" },
   { href: "/history", icon: BarChart2, label: "履歴" },
-  { href: "/about", icon: Info, label: "概要" },
 ];
 
 export default function BottomNav() {
@@ -22,7 +22,9 @@ export default function BottomNav() {
     >
       <div className="max-w-md mx-auto flex">
         {navItems.map(({ href, icon: Icon, label }) => {
-          const active = pathname === href;
+          const active = href === "/"
+            ? pathname === "/"
+            : pathname.startsWith(href);
           return (
             <Link
               key={href}

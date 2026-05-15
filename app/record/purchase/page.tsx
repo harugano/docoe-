@@ -2,23 +2,21 @@
 
 import { useState, useMemo } from "react";
 import { findCompany, searchCompanies, popularCompanies } from "@/lib/data/companyData";
-import {
-  productEthicalCategories,
-  findProductEthicalCategory,
-  searchProductEthicalCategory,
-} from "@/lib/data/productEthicalCategories";
 import { ethicalLabels, labelCategoryLabels } from "@/lib/data/ethicalLabels";
-import { searchEthicalLabels, findEthicalLabel } from "@/lib/searchEthicalLabels";
-import { CompanyImpact, PurchaseRecord, EthicalLabel, ProductEthicalCategory } from "@/lib/types";
+import { searchEthicalLabels } from "@/lib/searchEthicalLabels";
+import { matchProductEthicalCategory, MatchResult } from "@/lib/matchProductEthicalCategory";
+import { CompanyImpact, PurchaseRecord, EthicalLabel } from "@/lib/types";
 import { calcPurchaseScore, confidenceLabelJa, verificationLevelJa } from "@/lib/purchaseScore";
 import { addPurchase, localISOString } from "@/lib/store";
+import { addTransaction } from "@/lib/budgetStore";
+import { Transaction } from "@/lib/types";
 import {
   ChevronLeft, Check, AlertTriangle, Search,
-  ExternalLink, ChevronDown, ChevronUp, Tag, X,
+  ExternalLink, ChevronDown, ChevronUp, Tag, X, HelpCircle,
 } from "lucide-react";
 import Link from "next/link";
 
-// ===== 購入カテゴリ（buy category） =====
+// ===== 購入カテゴリ =====
 const BUY_CATEGORIES = [
   "食品・飲料", "日用品・雑貨", "文具・事務用品", "衣類・ファッション",
   "家電・電子機器", "本・メディア", "美容・コスメ", "スポーツ・アウトドア",
@@ -50,29 +48,28 @@ export default function PurchasePage() {
   const [step, setStep] = useState<Step>("input");
 
   // 企業
-  const [companyName, setCompanyName]         = useState("");
-  const [companyQuery, setCompanyQuery]       = useState("");
-  const [matchedCompany, setMatchedCompany]   = useState<CompanyImpact | null>(null);
-  const [suggestions, setSuggestions]         = useState<CompanyImpact[]>([]);
+  const [companyName, setCompanyName]       = useState("");
+  const [companyQuery, setCompanyQuery]     = useState("");
+  const [matchedCompany, setMatchedCompany] = useState<CompanyImpact | null>(null);
+  const [suggestions, setSuggestions]       = useState<CompanyImpact[]>([]);
 
   // 商品
-  const [productName, setProductName]         = useState("");
-  const [amount, setAmount]                   = useState("");
-  const [buyCategory, setBuyCategory]         = useState(BUY_CATEGORIES[0]);
-  const [memo, setMemo]                       = useState("");
-
-  // 商品エシカルカテゴリ
-  const [ethCatQuery, setEthCatQuery]         = useState("");
-  const [selectedEthCat, setSelectedEthCat]  = useState<ProductEthicalCategory | null>(null);
-  const [showEthCatPanel, setShowEthCatPanel] = useState(false);
+  const [productName, setProductName] = useState("");
+  const [amount, setAmount]           = useState("");
+  const [buyCategory, setBuyCategory] = useState(BUY_CATEGORIES[0]);
+  const [memo, setMemo]               = useState("");
 
   // ラベル
-  const [labelQuery, setLabelQuery]           = useState("");
-  const [selectedLabels, setSelectedLabels]  = useState<EthicalLabel[]>([]);
+  const [labelQuery, setLabelQuery]             = useState("");
+  const [selectedLabels, setSelectedLabels]     = useState<EthicalLabel[]>([]);
   const [customLabelInput, setCustomLabelInput] = useState("");
-  const [customLabels, setCustomLabels]       = useState<string[]>([]);
-  const [showLabelPanel, setShowLabelPanel]  = useState(false);
-  const [activeLabelCat, setActiveLabelCat]  = useState<string>("all");
+  const [customLabels, setCustomLabels]         = useState<string[]>([]);
+  const [showLabelPanel, setShowLabelPanel]     = useState(false);
+  const [activeLabelCat, setActiveLabelCat]     = useState<string>("all");
+
+  // 自動判定結果（保存後）
+  const [matchResult, setMatchResult]   = useState<MatchResult | null>(null);
+  const [corrected, setCorrected]       = useState(false);
 
   // 結果
   const [saved, setSaved] = useState<PurchaseRecord | null>(null);
@@ -90,12 +87,6 @@ export default function PurchasePage() {
     setMatchedCompany(c);
     setSuggestions([]);
   }
-
-  // ===== 商品エシカルカテゴリ検索 =====
-  const ethCatResults = useMemo(() => {
-    if (!ethCatQuery.trim()) return productEthicalCategories;
-    return searchProductEthicalCategory(ethCatQuery);
-  }, [ethCatQuery]);
 
   // ===== ラベル検索 =====
   const labelResults = useMemo(() => {
@@ -129,17 +120,29 @@ export default function PurchasePage() {
   function handleSave() {
     const amt     = Number(amount) || 0;
     const company = matchedCompany ?? findCompany(companyName);
-    const result  = calcPurchaseScore(company, amt, selectedEthCat, selectedLabels, customLabels);
+
+    // 商品名からカテゴリ自動判定
+    const match = matchProductEthicalCategory(productName.trim());
+    setMatchResult(match);
+    setCorrected(false);
+
+    const result = calcPurchaseScore(
+      company,
+      amt,
+      match.primaryCategory,
+      selectedLabels,
+      customLabels,
+    );
 
     const record: PurchaseRecord = {
       id: crypto.randomUUID(),
-      companyId:               company?.id ?? null,
-      companyName:             companyName.trim() || "（企業名未入力）",
-      productName:             productName.trim() || "（商品名未入力）",
-      amount:                  amt,
-      category:                buyCategory,
-      productEthicalCategoryId: selectedEthCat?.id ?? null,
-      selectedLabelIds:        selectedLabels.map((l) => l.id),
+      companyId:                company?.id ?? null,
+      companyName:              companyName.trim() || "（企業名未入力）",
+      productName:              productName.trim() || "（商品名未入力）",
+      amount:                   amt,
+      category:                 buyCategory,
+      productEthicalCategoryId: match.primaryCategory?.id ?? null,
+      selectedLabelIds:         selectedLabels.map((l) => l.id),
       customLabels,
       memo,
       point:          result.total,
@@ -147,15 +150,55 @@ export default function PurchasePage() {
       createdAt:      localISOString(),
     };
     addPurchase(record);
+
+    // 家計簿へ自動連携（買い物記録は支出として保存）
+    const nowStr   = localISOString();
+    const dateOnly = nowStr.slice(0, 10); // "YYYY-MM-DD"
+    const budgetTx: Transaction = {
+      id:                  crypto.randomUUID(),
+      type:                "expense",
+      amount:              amt,
+      date:                dateOnly,
+      category:            "買い物（記録連携）",
+      storeName:           companyName.trim() || undefined,
+      companyName:         companyName.trim() || undefined,
+      productName:         productName.trim() || undefined,
+      paymentMethod:       "other",
+      memo:                memo || undefined,
+      docoeCategories:     [],
+      supportTags:         [],
+      disposableTags:      [],
+      linkedPurchaseRecordId: record.id,
+      includeInDocoeScore: true,
+      docoeScoreBreakdown: {
+        companyPoint:        result.breakdown.moneyScore + result.breakdown.ecoScore +
+                             result.breakdown.localScore + result.breakdown.awarenessScore -
+                             (amt > 0 ? Math.floor(amt / 1000) : 0) - 1,
+        productEthicalPoint: result.breakdown.ethicalScore,
+        amountPoint:         Math.floor(amt / 1000),
+        labelPoint:          result.breakdown.labelScore,
+        totalPoint:          result.total,
+      },
+      createdAt:           nowStr,
+      updatedAt:           nowStr,
+    };
+    addTransaction(budgetTx);
+
     setSaved(record);
     setStep("result");
   }
 
   // ===== 結果用スコア再計算 =====
   const scoreResult = useMemo(() => {
-    if (step !== "result" || !saved) return null;
+    if (step !== "result" || !saved || !matchResult) return null;
     const company = matchedCompany ?? findCompany(companyName);
-    return calcPurchaseScore(company, Number(amount) || 0, selectedEthCat, selectedLabels, customLabels);
+    return calcPurchaseScore(
+      company,
+      Number(amount) || 0,
+      matchResult.primaryCategory,
+      selectedLabels,
+      customLabels,
+    );
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, saved]);
 
@@ -166,8 +209,8 @@ export default function PurchasePage() {
     setStep("input");
     setCompanyName(""); setCompanyQuery(""); setMatchedCompany(null); setSuggestions([]);
     setProductName(""); setAmount(""); setMemo("");
-    setSelectedEthCat(null); setEthCatQuery("");
     setSelectedLabels([]); setCustomLabels([]); setCustomLabelInput("");
+    setMatchResult(null); setCorrected(false);
     setSaved(null);
   }
 
@@ -215,7 +258,6 @@ export default function PurchasePage() {
               <span className="text-xs text-[#2d6a4f] font-medium">企業データベースで確認できました</span>
             </div>
           )}
-          {/* よく使われる企業 */}
           <div className="flex flex-wrap gap-1.5 pt-1">
             {popularCompanies.slice(0, 8).map((c) => (
               <button key={c.id}
@@ -232,8 +274,9 @@ export default function PurchasePage() {
           <div className="space-y-1">
             <label className="text-xs font-semibold text-[#4a5e4a]">商品名</label>
             <input type="text" value={productName} onChange={(e) => setProductName(e.target.value)}
-              placeholder="例：有機緑茶 500ml"
+              placeholder="例：有機緑茶 500ml、国産牛ステーキ"
               className="w-full text-sm text-[#1a4731] placeholder-[#c0ccc0] bg-[#faf8f4] border border-[#ede8dc] rounded-xl px-3 py-2 outline-none focus:border-[#52b788] transition-colors" />
+            <p className="text-[10px] text-[#8aaa8a]">商品名から環境・社会インパクトを自動判定します</p>
           </div>
           <div className="space-y-1">
             <label className="text-xs font-semibold text-[#4a5e4a]">購入金額（円）</label>
@@ -252,75 +295,6 @@ export default function PurchasePage() {
               {BUY_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
-        </div>
-
-        {/* 商品エシカルカテゴリ */}
-        <div className="bg-white rounded-2xl p-4 border border-[#ede8dc] shadow-sm space-y-2">
-          <button
-            onClick={() => setShowEthCatPanel((v) => !v)}
-            className="w-full flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">🌱</span>
-              <div className="text-left">
-                <p className="text-xs font-semibold text-[#4a5e4a]">商品エシカルカテゴリ</p>
-                <p className="text-[10px] text-[#8aaa8a]">
-                  {selectedEthCat ? selectedEthCat.categoryName : "商品の種類を選ぶと環境・社会インパクトを確認できます"}
-                </p>
-              </div>
-            </div>
-            {showEthCatPanel ? <ChevronUp size={16} className="text-[#8aaa8a]" /> : <ChevronDown size={16} className="text-[#8aaa8a]" />}
-          </button>
-
-          {selectedEthCat && (
-            <div className={`flex items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold ${
-              selectedEthCat.pointType === "positive"
-                ? "bg-green-50 text-green-700"
-                : selectedEthCat.pointType === "negative"
-                ? "bg-amber-50 text-amber-700"
-                : "bg-gray-50 text-gray-600"
-            }`}>
-              <span>{selectedEthCat.categoryName}</span>
-              <div className="flex items-center gap-2">
-                <span className="font-black">{pts(selectedEthCat.point)}pt</span>
-                <button onClick={() => setSelectedEthCat(null)}>
-                  <X size={14} />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {showEthCatPanel && (
-            <div className="space-y-2">
-              <input type="text" value={ethCatQuery}
-                onChange={(e) => setEthCatQuery(e.target.value)}
-                placeholder="カテゴリ名で絞り込み（例：牛肉、中古品）"
-                className="w-full text-sm bg-[#faf8f4] border border-[#ede8dc] rounded-xl px-3 py-2 outline-none focus:border-[#52b788] transition-colors" />
-              <div className="max-h-52 overflow-y-auto space-y-1">
-                {ethCatResults.map((cat) => (
-                  <button key={cat.id} onClick={() => { setSelectedEthCat(cat); setShowEthCatPanel(false); }}
-                    className={`w-full text-left rounded-xl px-3 py-2 border transition-colors ${
-                      selectedEthCat?.id === cat.id
-                        ? "border-[#52b788] bg-[#f0f7f3]"
-                        : "border-[#ede8dc] hover:bg-[#faf8f4]"
-                    }`}>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xs font-semibold text-[#1a4731]">{cat.categoryName}</p>
-                        <p className="text-[10px] text-[#8aaa8a] mt-0.5">{cat.impactSummary}</p>
-                      </div>
-                      <span className={`text-sm font-black ml-2 flex-shrink-0 ${
-                        cat.pointType === "positive" ? "text-green-600"
-                          : cat.pointType === "negative" ? "text-amber-600"
-                          : "text-gray-500"
-                      }`}>
-                        {pts(cat.point)}
-                      </span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* 確認できるラベル */}
@@ -349,7 +323,6 @@ export default function PurchasePage() {
                 <span key={l.id}
                   className="inline-flex items-center gap-1 text-[11px] bg-[#f0f7f3] text-[#2d6a4f] border border-[#b7e4c7] px-2 py-0.5 rounded-full font-medium">
                   {l.labelName}
-                  <span className="font-black">{pts(l.point)}</span>
                   <button onClick={() => toggleLabel(l)}><X size={11} /></button>
                 </span>
               ))}
@@ -366,13 +339,11 @@ export default function PurchasePage() {
 
           {showLabelPanel && (
             <div className="space-y-2">
-              {/* 検索 */}
               <input type="text" value={labelQuery}
                 onChange={(e) => setLabelQuery(e.target.value)}
                 placeholder="ラベル名で検索（例：FSC、フェアトレード）"
                 className="w-full text-sm bg-[#faf8f4] border border-[#ede8dc] rounded-xl px-3 py-2 outline-none focus:border-[#52b788] transition-colors" />
 
-              {/* カテゴリタブ */}
               {!labelQuery && (
                 <div className="flex gap-1.5 overflow-x-auto pb-1 hide-scrollbar">
                   <button onClick={() => setActiveLabelCat("all")}
@@ -390,13 +361,12 @@ export default function PurchasePage() {
                           ? "bg-[#2d6a4f] text-white border-[#2d6a4f]"
                           : "bg-white text-[#4a5e4a] border-[#ede8dc]"
                       }`}>
-                      {label}
+                      {label as string}
                     </button>
                   ))}
                 </div>
               )}
 
-              {/* ラベル一覧 */}
               <div className="max-h-52 overflow-y-auto space-y-1">
                 {labelResults.map((label) => {
                   const isSelected = selectedLabels.some((l) => l.id === label.id);
@@ -427,7 +397,6 @@ export default function PurchasePage() {
                 })}
               </div>
 
-              {/* 自由入力 */}
               <div className="border-t border-[#ede8dc] pt-2">
                 <p className="text-[10px] text-[#8aaa8a] mb-1">登録されていないラベルを入力</p>
                 <div className="flex gap-2">
@@ -467,12 +436,20 @@ export default function PurchasePage() {
 
   // ===== 結果ステップ =====
   if (!scoreResult || !saved) return null;
+
   const { breakdown } = scoreResult;
+  const detectedCat = matchResult?.primaryCategory ?? null;
+
   const brkItems = [
-    { label: "企業スコア",        value: breakdown.moneyScore + breakdown.ecoScore + breakdown.localScore + breakdown.awarenessScore - (Number(amount) > 0 ? Math.floor(Number(amount) / 1000) : 0) - 1, color: "#4a90d9" },
-    { label: "商品エシカルポイント", value: breakdown.ethicalScore, color: "#1a7a5e" },
-    { label: "金額ポイント",       value: Math.floor((Number(amount) || 0) / 1000), color: "#2d6a4f" },
-    { label: "確認できるラベル",   value: breakdown.labelScore, color: "#52b788" },
+    {
+      label: "企業スコア",
+      value: breakdown.moneyScore + breakdown.ecoScore + breakdown.localScore + breakdown.awarenessScore
+        - (Number(amount) > 0 ? Math.floor(Number(amount) / 1000) : 0) - 1,
+      color: "#4a90d9",
+    },
+    { label: "商品インパクト", value: breakdown.ethicalScore, color: "#1a7a5e" },
+    { label: "金額ポイント",   value: Math.floor((Number(amount) || 0) / 1000), color: "#2d6a4f" },
+    { label: "確認できるラベル", value: breakdown.labelScore, color: "#52b788" },
   ];
 
   return (
@@ -508,8 +485,6 @@ export default function PurchasePage() {
       {/* スコア内訳カード */}
       <div className="bg-white rounded-2xl p-4 border border-[#ede8dc] shadow-sm space-y-3">
         <p className="text-xs font-semibold text-[#4a5e4a]">スコア加算内訳</p>
-
-        {/* 4項目サマリ */}
         <div className="grid grid-cols-2 gap-2">
           {brkItems.map(({ label, value, color }) => (
             <div key={label} className="rounded-xl border border-[#ede8dc] p-2.5">
@@ -522,8 +497,6 @@ export default function PurchasePage() {
           <span className="text-xs font-semibold text-[#4a5e4a]">合計</span>
           <span className="text-xl font-black text-[#1a4731]">{pts(scoreResult.total)}pt</span>
         </div>
-
-        {/* 理由リスト */}
         <div className="space-y-1 pt-1">
           {scoreResult.reasons.map((r, i) => (
             <div key={i} className="flex items-start gap-1.5 text-[11px] text-[#4a5e4a]">
@@ -534,27 +507,39 @@ export default function PurchasePage() {
         </div>
       </div>
 
-      {/* 商品カテゴリ解説 */}
-      {selectedEthCat && (
-        <div className={`rounded-2xl p-4 border shadow-sm space-y-2 ${
-          selectedEthCat.pointType === "negative"
-            ? "bg-amber-50 border-amber-200"
-            : "bg-[#f0f7f3] border-[#b7e4c7]"
-        }`}>
-          <p className="text-xs font-semibold text-[#1a4731]">
-            🌱 商品カテゴリ：{selectedEthCat.categoryName}
+      {/* 自動判定：商品インパクト */}
+      {detectedCat ? (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-3">
+          {/* ヘッダー行 */}
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-[10px] text-amber-600 font-semibold mb-0.5">🌱 商品インパクト自動判定</p>
+              <p className="text-sm font-bold text-[#1a4731]">{detectedCat.categoryName}</p>
+              {matchResult && matchResult.matchedKeywords.length > 0 && (
+                <p className="text-[10px] text-amber-700 mt-0.5">
+                  キーワード：{matchResult.matchedKeywords.slice(0, 3).join("、")}
+                  {matchResult.matchedKeywords.length > 3 && ` 他${matchResult.matchedKeywords.length - 3}件`}
+                </p>
+              )}
+            </div>
+            <span className="text-xl font-black text-amber-700 flex-shrink-0">
+              {pts(detectedCat.point)}pt
+            </span>
+          </div>
+
+          {/* 説明 */}
+          <p className="text-[11px] text-[#4a5e4a] leading-relaxed">{detectedCat.explanation}</p>
+
+          <p className="text-[10px] text-amber-700 leading-relaxed">
+            ⚠ この評価は公開情報に基づく参考値です。個別の商品・メーカーを断定するものではありません。
           </p>
-          <p className="text-[11px] text-[#4a5e4a] leading-relaxed">{selectedEthCat.explanation}</p>
-          {selectedEthCat.pointType === "negative" && (
-            <p className="text-[10px] text-amber-700 leading-relaxed">
-              ⚠ この評価は公開情報に基づく参考値です。個別の商品・メーカーを断定するものではありません。
-            </p>
-          )}
-          {selectedEthCat.alternativeSuggestions.length > 0 && (
+
+          {/* 代替提案 */}
+          {detectedCat.alternativeSuggestions.length > 0 && (
             <div>
               <p className="text-[10px] font-semibold text-[#4a5e4a] mb-1">次回の選択肢として</p>
               <ul className="space-y-0.5">
-                {selectedEthCat.alternativeSuggestions.map((s, i) => (
+                {detectedCat.alternativeSuggestions.map((s, i) => (
                   <li key={i} className="text-[11px] text-[#4a5e4a] flex gap-1.5">
                     <span className="text-[#52b788] flex-shrink-0">›</span>{s}
                   </li>
@@ -562,15 +547,49 @@ export default function PurchasePage() {
               </ul>
             </div>
           )}
-          {selectedEthCat.sourceUrls.length > 0 && (
+
+          {/* ソース */}
+          {detectedCat.sourceUrls.length > 0 && (
             <div className="flex flex-col gap-0.5">
-              {selectedEthCat.sourceUrls.map((u, i) => (
+              {detectedCat.sourceUrls.map((u, i) => (
                 <p key={i} className="text-[10px] text-[#4a90d9] flex items-center gap-1 break-all">
                   <ExternalLink size={10} className="flex-shrink-0" />{u}
                 </p>
               ))}
             </div>
           )}
+
+          {/* 複数マッチ表示 */}
+          {matchResult && matchResult.matchedCategories.length > 1 && (
+            <p className="text-[10px] text-amber-600">
+              ※ 他に {matchResult.matchedCategories.length - 1} カテゴリが一致しました（最も影響度の高いものを表示）
+            </p>
+          )}
+
+          {/* 判定修正ボタン */}
+          {!corrected ? (
+            <button
+              onClick={() => setCorrected(true)}
+              className="flex items-center gap-1.5 text-[11px] text-amber-700 bg-amber-100 hover:bg-amber-200 border border-amber-300 px-3 py-1.5 rounded-full font-medium transition-colors">
+              <HelpCircle size={12} />
+              この判定は違います
+            </button>
+          ) : (
+            <div className="flex items-center gap-1.5 bg-white border border-amber-200 rounded-xl px-3 py-2">
+              <Check size={13} className="text-[#2d6a4f]" />
+              <p className="text-[11px] text-[#4a5e4a]">
+                フィードバックありがとうございます。判定の改善に役立てます。
+              </p>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* 判定なし */
+        <div className="bg-[#f5f5f5] border border-[#e0e0e0] rounded-2xl p-4">
+          <p className="text-xs font-semibold text-[#4a5e4a] mb-1">🌱 商品インパクト自動判定</p>
+          <p className="text-[11px] text-[#8aaa8a]">
+            商品名から環境・社会インパクトが指摘されるカテゴリは見つかりませんでした。
+          </p>
         </div>
       )}
 
@@ -644,6 +663,30 @@ export default function PurchasePage() {
                 {resolvedCompany.socialActions.map((a, i) => (
                   <li key={i} className="text-xs text-[#4a5e4a] flex gap-1.5">
                     <span className="text-[#4a90d9] flex-shrink-0">●</span>{a}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {resolvedCompany.localContributionActions.length > 0 && (
+            <div>
+              <p className="text-[10px] font-semibold text-[#4a5e4a] mb-1">🏘️ 地域循環</p>
+              <ul className="space-y-0.5">
+                {resolvedCompany.localContributionActions.map((a, i) => (
+                  <li key={i} className="text-xs text-[#4a5e4a] flex gap-1.5">
+                    <span className="text-[#6a7a2a] flex-shrink-0">●</span>{a}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {resolvedCompany.transparencyActions.length > 0 && (
+            <div>
+              <p className="text-[10px] font-semibold text-[#4a5e4a] mb-1">📊 情報開示</p>
+              <ul className="space-y-0.5">
+                {resolvedCompany.transparencyActions.map((a, i) => (
+                  <li key={i} className="text-xs text-[#4a5e4a] flex gap-1.5">
+                    <span className="text-[#c9a227] flex-shrink-0">●</span>{a}
                   </li>
                 ))}
               </ul>

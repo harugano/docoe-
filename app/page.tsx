@@ -11,6 +11,7 @@ import {
   currentMonth, prevMonth, formatMonthLabel,
   currentDate, getDailyScore,
 } from "@/lib/store";
+import { getMonthlyIncome, getMonthlyExpense, getMonthlyBalance } from "@/lib/budgetStore";
 import { MonthlyScore } from "@/lib/types";
 import ScoreCard from "@/components/ScoreCard";
 import Link from "next/link";
@@ -40,6 +41,9 @@ export default function HomePage() {
   const [chart, setChart]   = useState<MonthlyScore[]>([]);
   const [daily, setDaily]   = useState<MonthlyScore | null>(null);
   const [today, setToday]   = useState<string>("");
+  const [budgetIncome,  setBudgetIncome]  = useState(0);
+  const [budgetExpense, setBudgetExpense] = useState(0);
+  const [budgetBalance, setBudgetBalance] = useState(0);
 
   useEffect(() => {
     const loadData = () => {
@@ -52,6 +56,9 @@ export default function HomePage() {
       setChart(getRecentMonths(6));
       setDaily(getDailyScore(date));
       setToday(date);
+      setBudgetIncome(getMonthlyIncome(now));
+      setBudgetExpense(getMonthlyExpense(now));
+      setBudgetBalance(getMonthlyBalance(now));
     };
 
     loadData();
@@ -219,6 +226,59 @@ export default function HomePage() {
             <span className="text-[9px] text-white/80">お金の行き先</span>
           </Link>
         </div>
+      </section>
+
+      {/* 家計簿サマリー */}
+      <section className="bg-white rounded-2xl border border-[#ede8dc] shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[#ede8dc]">
+          <div className="flex items-center gap-2">
+            <span className="text-base">📒</span>
+            <div>
+              <p className="text-xs font-bold text-[#1a4731]">今月の家計簿</p>
+              <p className="text-[10px] text-[#8aaa8a]">お金のめぐりを確認する</p>
+            </div>
+          </div>
+          <Link href="/budget" className="text-[11px] text-[#4a90d9] font-medium">
+            詳細 ›
+          </Link>
+        </div>
+        <div className="grid grid-cols-3 divide-x divide-[#f0f0f0]">
+          <div className="px-3 py-3 text-center">
+            <p className="text-[10px] text-[#8aaa8a] mb-0.5">収入</p>
+            <p className="text-sm font-black text-[#2d6a4f]">
+              {budgetIncome > 0 ? `${(budgetIncome / 10000).toFixed(1)}万` : "—"}
+            </p>
+          </div>
+          <div className="px-3 py-3 text-center">
+            <p className="text-[10px] text-[#8aaa8a] mb-0.5">支出</p>
+            <p className="text-sm font-black text-[#e07b39]">
+              {budgetExpense > 0 ? `${(budgetExpense / 10000).toFixed(1)}万` : "—"}
+            </p>
+          </div>
+          <div className="px-3 py-3 text-center">
+            <p className="text-[10px] text-[#8aaa8a] mb-0.5">残高</p>
+            <p className={`text-sm font-black ${
+              budgetIncome === 0 && budgetExpense === 0
+                ? "text-[#8aaa8a]"
+                : budgetBalance >= 0
+                  ? "text-[#1a4731]"
+                  : "text-red-500"
+            }`}>
+              {budgetIncome === 0 && budgetExpense === 0
+                ? "—"
+                : (budgetBalance >= 0 ? "+" : "") + (budgetBalance / 10000).toFixed(1) + "万"
+              }
+            </p>
+          </div>
+        </div>
+        {budgetIncome === 0 && budgetExpense === 0 && (
+          <div className="px-4 pb-3">
+            <Link href="/budget/new"
+              className="flex items-center justify-center gap-1.5 text-[11px] text-[#2d6a4f] font-bold bg-[#f0f7f3] rounded-xl py-2">
+              ＋ 最初の記録を追加する
+            </Link>
+          </div>
+        )}
       </section>
 
       {/* Coming Soon */}
