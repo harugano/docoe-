@@ -1,0 +1,10 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "app.docoe.twa",
+    "sha256_cert_fingerprints": [
+      "26:A2:3A:5F:42:29:9A:9F:28:DA:CC:AA:F8:4E:0D:03:8D:34:BF:07:D4:E7:33:F5:92:1A:34:22:E9:1D:86:EF"
+    ]
+  }
+}]

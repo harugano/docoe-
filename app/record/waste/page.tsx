@@ -97,28 +97,89 @@ export default function WasteRecordPage() {
         </div>
       </header>
 
-      {/* Step 1: 種類選択 */}
+      {/* Step 1: 種類選択 — コストタイプ別グループ */}
       {step === "select" && (
-        <div className="space-y-2">
-          {wasteItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => handleSelect(item)}
-              className="w-full bg-white rounded-2xl p-4 border border-[#ede8dc] shadow-sm text-left flex items-center gap-3 active:bg-[#f0f7f3] transition-colors"
-            >
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-[#1a4731]">{item.name}</span>
-                  {costBadge(item.costType)}
+        <div className="space-y-4">
+          {/* 地域にプラス */}
+          <div className="space-y-2">
+            <div className="bg-green-50 border border-green-200 rounded-2xl px-4 py-3 text-xs text-green-800 leading-relaxed">
+              ♻️ 以下は<span className="font-bold">地域に収益をもたらす</span>品目です。
+              正しく分別・排出することでリサイクル収益に貢献できます。
+            </div>
+            {wasteItems.filter((item) => item.costType === "plus").map((item) => (
+              <button
+                key={item.id}
+                onClick={() => handleSelect(item)}
+                className="w-full bg-white rounded-2xl p-4 border border-[#ede8dc] shadow-sm text-left flex items-center gap-3 active:bg-[#f0f7f3] transition-colors"
+              >
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-bold text-[#1a4731]">{item.name}</span>
+                    {costBadge(item.costType)}
+                  </div>
+                  <p className="text-[10px] text-[#8aaa8a] mt-0.5">{item.destination}</p>
                 </div>
-                <p className="text-[10px] text-[#8aaa8a] mt-0.5">{item.destination}</p>
-              </div>
-              <div className="text-right">
-                <span className="text-sm font-bold text-[#2d6a4f]">+{item.defaultPoint}pt</span>
-                <p className="text-[10px] text-[#8aaa8a]">/{item.unit}</p>
-              </div>
-            </button>
-          ))}
+                <div className="text-right shrink-0">
+                  <span className="text-sm font-bold text-green-600">+{item.defaultPoint}pt</span>
+                  <p className="text-[10px] text-[#8aaa8a]">/{item.unit}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* 中立 */}
+          <div className="space-y-2">
+            <div className="bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs text-gray-600 leading-relaxed">
+              ⚖️ 以下は<span className="font-bold">コストがほぼ中立</span>な品目です。
+              正しく分別することで資源として活用されます。
+            </div>
+            {wasteItems.filter((item) => item.costType === "neutral").map((item) => (
+              <button
+                key={item.id}
+                onClick={() => handleSelect(item)}
+                className="w-full bg-white rounded-2xl p-4 border border-[#ede8dc] shadow-sm text-left flex items-center gap-3 active:bg-[#fafafa] transition-colors"
+              >
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-bold text-[#1a4731]">{item.name}</span>
+                    {costBadge(item.costType)}
+                  </div>
+                  <p className="text-[10px] text-[#8aaa8a] mt-0.5">{item.destination}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="text-sm font-bold text-gray-500">+{item.defaultPoint}pt</span>
+                  <p className="text-[10px] text-[#8aaa8a]">/{item.unit}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* 処理コストあり */}
+          <div className="space-y-2">
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-xs text-amber-800 leading-relaxed">
+              ⚠️ 以下は<span className="font-bold">地域の処理コストが発生する</span>品目です。
+              正しく分別・排出することで処理コストの削減に貢献できます。
+            </div>
+            {wasteItems.filter((item) => item.costType === "minus").map((item) => (
+              <button
+                key={item.id}
+                onClick={() => handleSelect(item)}
+                className="w-full bg-white rounded-2xl p-4 border border-[#ede8dc] shadow-sm text-left flex items-center gap-3 active:bg-[#fff8f0] transition-colors"
+              >
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-bold text-[#1a4731]">{item.name}</span>
+                    {costBadge(item.costType)}
+                  </div>
+                  <p className="text-[10px] text-[#8aaa8a] mt-0.5">{item.destination}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="text-sm font-bold text-amber-600">{item.defaultPoint}pt</span>
+                  <p className="text-[10px] text-[#8aaa8a]">/{item.unit}</p>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -204,10 +265,12 @@ export default function WasteRecordPage() {
             </div>
             <p className="text-sm font-bold mb-1">記録しました！</p>
             <p className="text-3xl font-black">
-              +{selected.defaultPoint * Math.max(1, quantity)}
+              {selected.defaultPoint * Math.max(1, quantity)}
               <span className="text-base text-[#b7e4c7] ml-1">pt</span>
             </p>
-            <p className="text-xs text-[#b7e4c7] mt-1">ごみのめぐりスコアに加算されました</p>
+            <p className="text-xs text-[#b7e4c7] mt-1">
+              正しく分別することで地域コストを意識できました
+            </p>
           </div>
 
           {/* 行き先情報 */}
